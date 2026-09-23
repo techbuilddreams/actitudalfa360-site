@@ -1,0 +1,4 @@
+User-agent: *
+Disallow: /api/
+Disallow: /gracias.html
+Sitemap: https://actitudalfa360.com/sitemap.xml
