@@ -40,7 +40,7 @@ Ver `.env.example`. Se configuran en Hostinger (Web App → Environment variable
 npm run dev          # local
 npm run check        # lint + typecheck + tests
 npm run build        # build de producción
-npm start            # migra la base de datos y arranca
+npm start            # arranca (las migraciones corren solas al iniciar, src/instrumentation.ts)
 npm run db:generate  # nueva migración tras cambiar src/infrastructure/db/schema.ts
 ```
 
