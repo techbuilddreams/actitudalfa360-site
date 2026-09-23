@@ -1,17 +1,36 @@
 # actitudalfa360.com
 
-Landing y tienda de **Actitud Alfa 360**. HTML/CSS/JS estático + un endpoint PHP para Stripe Checkout. Sin build.
+Landing y tienda de **Actitud Alfa 360**. HTML/CSS/JS estático + PHP mínimo para Stripe. Sin dependencias, sin build.
+
+```
+/                 → sitio público (public_html)
+api/checkout.php  → crea la sesión de Stripe Checkout
+api/webhook.php   → recibe pagos de Stripe (firma verificada)
+api/_lib/         → código interno (bloqueado por .htaccess)
+```
+
+## Secretos (.env) — nunca en GitHub
+En el servidor, **un nivel arriba de `public_html`**:
+```
+domains/actitudalfa360.com/
+├── .env            ← copia de .env.example con tus llaves (permisos 600)
+├── storage/        ← pedidos y límites (se crea solo, 700)
+└── public_html/    ← este repo
+```
+El servidor web no puede servir nada fuera de `public_html`.
 
 ## Despliegue
-Hostinger → Websites → actitudalfa360.com → Advanced → **Git**: repo `techbuilddreams/actitudalfa360-site`, rama `main`, directorio vacío (public_html). Activa **Auto Deployment** y pega el webhook en GitHub → Settings → Webhooks. Cada push a `main` publica el sitio.
+Hostinger → Git conectado a `techbuilddreams/actitudalfa360-site`, rama `main`, auto-deploy. Push a `main` = sitio publicado. CI revisa sintaxis PHP y que no se suban llaves.
 
 ## Stripe
-1. Copia `aa360-config.example.php` a `domains/actitudalfa360.com/aa360-config.php` (UN NIVEL ARRIBA de `public_html`, con el File Manager).
-2. Pon tu `sk_live_...` (o `sk_test_...` para probar).
-El archivo nunca va a GitHub.
+- Llave **restringida** (`rk_live_…`) solo con *Checkout Sessions: Write*.
+- Webhook → `https://actitudalfa360.com/api/webhook.php`, evento `checkout.session.completed`, secreto en `STRIPE_WEBHOOK_SECRET`.
+- El precio siempre lo pone el servidor (`api/_lib/products.php`); el navegador solo manda `sku` y `qty`.
 
-## Pedidos
-Stripe cobra (producto + envío). Cada pago trae en `metadata` el `printify_product_id` y `printify_variant_id`. v1: crear el pedido en Printify a mano. v2: webhook `checkout.session.completed` → API de Printify.
+## Seguridad incluida
+HTTPS + HSTS · CSP estricta · sin iframes (clickjacking) · verificación de origen en el checkout · límite de 10 intentos/min por IP · firma HMAC + ventana de 5 min en el webhook · idempotencia de pedidos · errores sin detalles al cliente · archivos privados bloqueados · `security.txt`.
 
-## Productos
-`api/products.php` — nombre, precio (centavos), imagen, IDs de Printify.
+## Checklist de cuentas
+- [ ] 2FA en Stripe, Hostinger y GitHub
+- [ ] Protección de rama `main` en GitHub
+- [ ] Stripe Radar activo (viene por defecto)

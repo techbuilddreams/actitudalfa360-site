@@ -1,33 +1,26 @@
 <?php
-// Crea una sesión de Stripe Checkout y devuelve su URL.
+// POST /api/checkout.php  { sku, qty }  →  { url }  (Stripe Checkout)
 declare(strict_types=1);
-header('Content-Type: application/json; charset=utf-8');
-header('Cache-Control: no-store');
+require __DIR__ . '/_lib/bootstrap.php';
 
-function fail(int $code, string $msg): void {
-  http_response_code($code);
-  echo json_encode(['error' => $msg], JSON_UNESCAPED_UNICODE);
-  exit;
-}
+if ($_SERVER['REQUEST_METHOD'] !== 'POST') json_out(405, ['error' => 'Método no permitido.']);
+require_same_origin();
+rate_limit('checkout', 10, 60);
 
-if ($_SERVER['REQUEST_METHOD'] !== 'POST') fail(405, 'Método no permitido.');
+if (stripos($_SERVER['CONTENT_TYPE'] ?? '', 'application/json') !== 0) json_out(415, ['error' => 'Formato no válido.']);
+$raw = file_get_contents('php://input', false, null, 0, 2048) ?: '';
+$in = json_decode($raw, true);
+if (!is_array($in)) json_out(400, ['error' => 'Petición no válida.']);
 
-// La llave secreta vive FUERA del repo y de public_html (ver README).
-$configFile = dirname(__DIR__, 2) . '/aa360-config.php';
-$config = is_file($configFile) ? require $configFile : [];
-$secret = $config['stripe_secret_key'] ?? getenv('STRIPE_SECRET_KEY') ?: '';
-if ($secret === '') fail(500, 'La tienda todavía no está conectada a Stripe.');
+$sku = is_string($in['sku'] ?? null) ? $in['sku'] : '';
+$qty = filter_var($in['qty'] ?? 1, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1, 'max_range' => 5]]);
+if ($qty === false) json_out(400, ['error' => 'Cantidad no válida.']);
 
-$in = json_decode(file_get_contents('php://input') ?: '{}', true) ?: [];
-$sku = (string)($in['sku'] ?? '');
-$qty = max(1, min(5, (int)($in['qty'] ?? 1)));
+$products = require __DIR__ . '/_lib/products.php';
+if (!isset($products[$sku])) json_out(400, ['error' => 'Producto no encontrado.']);
+$p = $products[$sku];   // El precio SIEMPRE sale del servidor, nunca del navegador.
 
-$products = require __DIR__ . '/products.php';
-if (!isset($products[$sku])) fail(400, 'Producto no encontrado.');
-$p = $products[$sku];
-
-$site = 'https://actitudalfa360.com';
-$shippingCents = (int)($config['shipping_cents'] ?? 899);
+$site = rtrim((string)env('SITE_URL', 'https://actitudalfa360.com'), '/');
 
 $params = [
   'mode' => 'payment',
@@ -45,7 +38,7 @@ $params = [
     'shipping_rate_data' => [
       'type' => 'fixed_amount',
       'display_name' => 'Envío estándar EE.UU.',
-      'fixed_amount' => ['amount' => $shippingCents, 'currency' => 'usd'],
+      'fixed_amount' => ['amount' => (int)env('SHIPPING_CENTS', '899'), 'currency' => 'usd'],
       'delivery_estimate' => [
         'minimum' => ['unit' => 'business_day', 'value' => 5],
         'maximum' => ['unit' => 'business_day', 'value' => 10],
@@ -53,32 +46,17 @@ $params = [
     ],
   ]],
   'phone_number_collection' => ['enabled' => 'true'],
-  'automatic_tax' => ['enabled' => !empty($config['automatic_tax']) ? 'true' : 'false'],
+  'automatic_tax' => ['enabled' => env_bool('AUTOMATIC_TAX') ? 'true' : 'false'],
   'success_url' => $site . '/gracias.html?session_id={CHECKOUT_SESSION_ID}',
   'cancel_url'  => $site . '/#tienda',
-  'metadata' => [
-    'sku' => $sku,
-    'qty' => (string)$qty,
-    'printify_product_id' => $p['printify_product_id'],
-    'printify_variant_id' => (string)$p['printify_variant_id'],
-  ],
+  'metadata' => ['sku' => $sku, 'qty' => (string)$qty],
+  'payment_intent_data' => ['metadata' => ['sku' => $sku, 'qty' => (string)$qty]],
 ];
 
-$ch = curl_init('https://api.stripe.com/v1/checkout/sessions');
-curl_setopt_array($ch, [
-  CURLOPT_POST => true,
-  CURLOPT_RETURNTRANSFER => true,
-  CURLOPT_USERPWD => $secret . ':',
-  CURLOPT_POSTFIELDS => http_build_query($params),
-  CURLOPT_TIMEOUT => 20,
-]);
-$body = curl_exec($ch);
-$status = (int)curl_getinfo($ch, CURLINFO_HTTP_CODE);
-curl_close($ch);
-
-$data = json_decode((string)$body, true);
-if ($status !== 200 || empty($data['url'])) {
-  error_log('Stripe checkout error: ' . $body);
-  fail(502, 'No se pudo iniciar el pago.');
+try {
+  $session = stripe_request('POST', 'checkout/sessions', $params, bin2hex(random_bytes(16)));
+} catch (Throwable $e) {
+  json_out(502, ['error' => 'No se pudo iniciar el pago.']);
 }
-echo json_encode(['url' => $data['url']]);
+if (empty($session['url'])) json_out(502, ['error' => 'No se pudo iniciar el pago.']);
+json_out(200, ['url' => $session['url']]);

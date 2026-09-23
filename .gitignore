@@ -1,2 +1,6 @@
-aa360-config.php
+.env
+.env.*
+!.env.example
+storage/
+*.log
 .DS_Store
