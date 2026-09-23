@@ -9,7 +9,7 @@ return [
     'printify_variant_id' => 104470,
   ],
   'tumbler-20' => [
-    'name'   => 'Tumbler 20 oz — Háblame de hacer dinero, no de gente',
+    'name'   => 'Vaso térmico 20 oz — Háblame de hacer dinero, no de gente',
     'amount' => 3499,
     'image'  => 'https://actitudalfa360.com/assets/img/tumbler.jpg',
     'printify_product_id' => '6ab327cbb4a5ca59a905799e',

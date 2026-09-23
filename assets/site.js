@@ -19,7 +19,7 @@
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ sku, qty })
         });
-        const data = await res.json();
+        const data = await res.json().catch(() => ({}));
         if (!res.ok || !data.url) throw new Error(data.error || 'No se pudo iniciar el pago.');
         window.location.href = data.url;
       } catch (e) {
@@ -28,5 +28,17 @@
       }
     });
   });
+  // Al volver de Stripe con "Atrás", el navegador restaura la página congelada: recargar.
+  window.addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
+
+  // Vistas del producto (lado logo / lado frase), funciona en móvil y teclado.
+  document.querySelectorAll('[data-view]').forEach((b) => {
+    b.addEventListener('click', () => {
+      const card = b.closest('.product');
+      card.classList.toggle('show-alt', b.dataset.view === 'alt');
+      card.querySelectorAll('[data-view]').forEach((x) => x.setAttribute('aria-pressed', String(x === b)));
+    });
+  });
+
   const y = document.getElementById('year'); if (y) y.textContent = new Date().getFullYear();
 })();

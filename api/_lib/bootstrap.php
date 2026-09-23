@@ -91,7 +91,7 @@ function stripe_request(string $method, string $path, array $params = [], ?strin
     CURLOPT_TIMEOUT => 20,
     CURLOPT_CUSTOMREQUEST => $method,
   ];
-  if ($method === 'POST') $opts[CURLOPT_POSTFIELDS] = http_build_query($params);
+  if ($method === 'POST') $opts[CURLOPT_POSTFIELDS] = http_build_query($params, '', '&');
   curl_setopt_array($ch, $opts);
   $body = curl_exec($ch);
   $status = (int)curl_getinfo($ch, CURLINFO_HTTP_CODE);

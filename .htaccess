@@ -13,7 +13,7 @@ RewriteCond %{HTTP_HOST} ^www\. [NC]
 RewriteRule ^ https://actitudalfa360.com%{REQUEST_URI} [L,R=301]
 
 # Bloquear archivos privados / del repo
-RewriteCond %{REQUEST_URI} !^/\.well-known/security\.txt$
+RewriteCond %{REQUEST_URI} !^/\.well-known/(security\.txt$|acme-challenge/)
 RewriteRule (^|/)\. - [F,L]
 RewriteRule ^api/_lib/ - [F,L]
 RewriteRule ^storage/ - [F,L]

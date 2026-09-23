@@ -24,6 +24,7 @@ $site = rtrim((string)env('SITE_URL', 'https://actitudalfa360.com'), '/');
 
 $params = [
   'mode' => 'payment',
+  'payment_method_types' => ['card'],   // tarjeta + Apple Pay + Google Pay; sin métodos diferidos
   'locale' => 'es',
   'line_items' => [[
     'quantity' => $qty,

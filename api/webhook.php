@@ -14,7 +14,8 @@ if ($secret === '' || !verify_stripe_signature($payload, $sigHdr, $secret, 300))
 }
 
 $event = json_decode($payload, true);
-if (!is_array($event) || ($event['type'] ?? '') !== 'checkout.session.completed') {
+$handled = ['checkout.session.completed', 'checkout.session.async_payment_succeeded'];
+if (!is_array($event) || !in_array($event['type'] ?? '', $handled, true)) {
   json_out(200, ['received' => true]);   // Otros eventos: se ignoran.
 }
 
@@ -24,9 +25,15 @@ if (($s['payment_status'] ?? '') !== 'paid') json_out(200, ['received' => true])
 $sessionId = preg_replace('/[^A-Za-z0-9_]/', '', (string)($s['id'] ?? ''));
 if ($sessionId === '') json_out(400, ['error' => 'session']);
 
-// Idempotencia: Stripe puede reenviar el mismo evento.
+// Idempotencia atómica: solo el primer proceso "reclama" el pedido (evita pedidos dobles si Stripe reintenta).
 $orderFile = storage_dir('orders') . '/' . $sessionId . '.json';
-if (is_file($orderFile)) json_out(200, ['received' => true, 'duplicate' => true]);
+$fh = @fopen($orderFile, 'x');
+if ($fh === false) {
+  if (is_file($orderFile)) json_out(200, ['received' => true, 'duplicate' => true]);
+  error_log('[aa360] No se pudo escribir en storage/orders');
+  json_out(500, ['error' => 'storage']);   // Stripe reintentará
+}
+@chmod($orderFile, 0600);
 
 $products = require __DIR__ . '/_lib/products.php';
 $sku = (string)($s['metadata']['sku'] ?? '');
@@ -58,8 +65,8 @@ if (env_bool('PRINTIFY_AUTO_ORDER') && isset($products[$sku])) {
   }
 }
 
-file_put_contents($orderFile, json_encode($order, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE), LOCK_EX);
-@chmod($orderFile, 0600);
+fwrite($fh, json_encode($order, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
+fclose($fh);
 
 $notify = (string)env('ORDER_NOTIFY_EMAIL', '');
 if ($notify !== '' && filter_var($notify, FILTER_VALIDATE_EMAIL)) {
