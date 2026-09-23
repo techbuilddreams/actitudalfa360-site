@@ -22,6 +22,14 @@ const schema = z.object({
   PRINTIFY_API_TOKEN: z.string().min(20).optional(),
   PRINTIFY_SHOP_ID: z.string().regex(/^\d+$/).optional(),
 
+  // Correo transaccional (SMTP de Hostinger). Si falta SMTP_PASSWORD, no se envían correos.
+  SMTP_HOST: z.string().default('smtp.hostinger.com'),
+  SMTP_PORT: z.coerce.number().int().default(465),
+  SMTP_USER: z.email().optional(),
+  SMTP_PASSWORD: z.string().min(1).optional(),
+  MAIL_FROM: z.string().default('Actitud Alfa 360 <hola@actitudalfa360.com>'),
+  ORDER_NOTIFY_EMAIL: z.email().optional(),
+
   SHIPPING_FLAT_CENTS: z.coerce.number().int().min(0).default(899),
 });
 

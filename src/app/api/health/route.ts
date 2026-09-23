@@ -14,5 +14,6 @@ export function GET() {
     webhook: Boolean(e.STRIPE_WEBHOOK_SECRET),
     database: Boolean(e.DATABASE_URL),
     printifyAutoOrder: e.PRINTIFY_AUTO_ORDER,
+    email: Boolean(e.SMTP_USER && e.SMTP_PASSWORD),
   });
 }

@@ -14,6 +14,10 @@ import { MySqlOrderRepository } from './db/mysql-order-repository';
 import { InMemoryOrderRepository } from './memory/in-memory-order-repository';
 import { consoleLogger } from './notify/console-logger';
 import { LogNotifier } from './notify/log-notifier';
+import { EmailNotifier } from './notify/email-notifier';
+import { CompositeNotifier } from './notify/composite-notifier';
+import { SmtpMailer } from './email/smtp-mailer';
+import type { Notifier } from '@/application/ports/notifier';
 import { createRateLimiter } from './security/rate-limit';
 
 /**
@@ -22,6 +26,7 @@ import { createRateLimiter } from './security/rate-limit';
  */
 let payments: StripeGateway | undefined;
 let orders: OrderRepository | undefined;
+let notifier: Notifier | undefined;
 
 export const catalog = staticCatalog;
 export const logger = consoleLogger;
@@ -52,6 +57,20 @@ function orderRepository(): OrderRepository {
   return orders;
 }
 
+function notifications(): Notifier {
+  if (notifier) return notifier;
+  const e = env();
+  const list: Notifier[] = [new LogNotifier(logger)];
+  if (e.SMTP_USER && e.SMTP_PASSWORD) {
+    const mailer = new SmtpMailer({ host: e.SMTP_HOST, port: e.SMTP_PORT, user: e.SMTP_USER, password: e.SMTP_PASSWORD, from: e.MAIL_FROM });
+    list.push(new EmailNotifier(mailer, catalog, logger, e.ORDER_NOTIFY_EMAIL));
+  } else {
+    logger.warn('Correo desactivado: faltan SMTP_USER/SMTP_PASSWORD');
+  }
+  notifier = new CompositeNotifier(list);
+  return notifier;
+}
+
 export const createCheckout = () =>
   makeCreateCheckout({
     catalog,
@@ -68,7 +87,7 @@ export const handlePayment = () =>
     fulfillment: env().PRINTIFY_AUTO_ORDER
       ? new PrintifyFulfillment({ token: requireEnv('PRINTIFY_API_TOKEN'), shopId: requireEnv('PRINTIFY_SHOP_ID') })
       : null,
-    notifier: new LogNotifier(logger),
+    notifier: notifications(),
     logger,
     newId: randomUUID,
     now: () => new Date(),
