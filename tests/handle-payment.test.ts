@@ -45,6 +45,14 @@ describe('handlePayment', () => {
     expect(notifier.orderPaid).toHaveBeenCalledOnce();
   });
 
+  it('webhooks concurrentes del mismo pago producen el pedido una sola vez', async () => {
+    const createDraftOrder = vi.fn(async () => { await new Promise((r) => setTimeout(r, 10)); return 'pf_1'; });
+    const { handle } = setup({ name: 'fake', createDraftOrder });
+    const results = await Promise.all([handle(paid), handle(paid), handle(paid), handle(paid)]);
+    expect(results.filter((r) => r === 'created')).toHaveLength(1);
+    expect(createDraftOrder).toHaveBeenCalledTimes(1);
+  });
+
   it('sin proveedor de producción, queda como pagado para crearlo a mano', async () => {
     const { orders, handle } = setup(null);
     await handle(paid);

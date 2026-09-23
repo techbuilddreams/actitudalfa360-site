@@ -1,7 +1,7 @@
 {
   "version": "5",
   "dialect": "mysql",
-  "id": "78814657-03c2-4510-bb9f-d0f5b341d4c7",
+  "id": "603baaf0-37d8-425c-904e-d50f8b922f48",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "tables": {
     "orders": {
@@ -9,7 +9,7 @@
       "columns": {
         "id": {
           "name": "id",
-          "type": "varchar(36)",
+          "type": "char(36)",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false
@@ -23,7 +23,7 @@
         },
         "status": {
           "name": "status",
-          "type": "varchar(32)",
+          "type": "enum('paid','fulfillment_pending','fulfillment_processing','fulfillment_created','fulfillment_failed')",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false
@@ -37,14 +37,14 @@
         },
         "total_cents": {
           "name": "total_cents",
-          "type": "int",
+          "type": "int unsigned",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false
         },
         "currency": {
           "name": "currency",
-          "type": "varchar(3)",
+          "type": "char(3)",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false
@@ -77,6 +77,13 @@
           "notNull": false,
           "autoincrement": false
         },
+        "claimed_at": {
+          "name": "claimed_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
         "created_at": {
           "name": "created_at",
           "type": "timestamp",
@@ -102,10 +109,11 @@
           ],
           "isUnique": true
         },
-        "orders_status_idx": {
-          "name": "orders_status_idx",
+        "orders_status_created_idx": {
+          "name": "orders_status_created_idx",
           "columns": [
-            "status"
+            "status",
+            "created_at"
           ],
           "isUnique": false
         },
@@ -127,7 +135,16 @@
         }
       },
       "uniqueConstraints": {},
-      "checkConstraint": {}
+      "checkConstraint": {
+        "orders_currency_ck": {
+          "name": "orders_currency_ck",
+          "value": "`orders`.`currency` = 'usd'"
+        },
+        "orders_lines_ck": {
+          "name": "orders_lines_ck",
+          "value": "JSON_LENGTH(`orders`.`lines`) > 0"
+        }
+      }
     }
   },
   "views": {},

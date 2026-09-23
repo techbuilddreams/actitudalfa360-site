@@ -32,3 +32,15 @@ describe('metadata de líneas', () => {
     expect(decodeLines('basura,:,x:y')).toEqual([]);
   });
 });
+
+import { isAuthorized, safeEqual } from '@/infrastructure/security/basic-auth';
+
+describe('staging basic auth', () => {
+  it('acepta solo las credenciales correctas', () => {
+    expect(isAuthorized(`Basic ${btoa('luis:secreto')}`, 'luis:secreto')).toBe(true);
+    expect(isAuthorized(`Basic ${btoa('luis:otra')}`, 'luis:secreto')).toBe(false);
+    expect(isAuthorized(null, 'luis:secreto')).toBe(false);
+    expect(isAuthorized('Basic !!!', 'luis:secreto')).toBe(false);
+    expect(safeEqual('abc', 'abcd')).toBe(false);
+  });
+});

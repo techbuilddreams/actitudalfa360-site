@@ -1,5 +1,5 @@
 import 'server-only';
-import { eq } from 'drizzle-orm';
+import { and, eq, lt, or } from 'drizzle-orm';
 import { usd } from '@/domain/money';
 import type { Order, OrderStatus } from '@/domain/order';
 import type { OrderRepository } from '@/application/ports/order-repository';
@@ -55,11 +55,28 @@ export class MySqlOrderRepository implements OrderRepository {
     }
   }
 
-  async updateStatus(id: string, status: OrderStatus, fulfillmentRef?: string | null) {
+  /** UPDATE condicional (compare-and-set): gana solo quien cambia 1 fila. */
+  async claimForFulfillment(id: string, now: Date, staleBefore: Date) {
+    const [res] = await this.db
+      .update(orders)
+      .set({ status: 'fulfillment_processing', claimedAt: now })
+      .where(
+        and(
+          eq(orders.id, id),
+          or(
+            eq(orders.status, 'fulfillment_pending'),
+            and(eq(orders.status, 'fulfillment_processing'), lt(orders.claimedAt, staleBefore)),
+          ),
+        ),
+      );
+    return res.affectedRows === 1;
+  }
+
+  async completeFulfillment(id: string, result: { status: 'fulfillment_created'; ref: string } | { status: 'fulfillment_failed' }) {
     await this.db
       .update(orders)
-      .set({ status, ...(fulfillmentRef !== undefined ? { fulfillmentRef } : {}) })
-      .where(eq(orders.id, id));
+      .set({ status: result.status, ...(result.status === 'fulfillment_created' ? { fulfillmentRef: result.ref } : {}) })
+      .where(and(eq(orders.id, id), eq(orders.status, 'fulfillment_processing')));
   }
 
   async findByPaymentRef(paymentRef: string) {

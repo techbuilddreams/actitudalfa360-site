@@ -25,10 +25,10 @@ src/
 
 | Rama | Entorno | Dominio | Stripe | Indexable |
 |---|---|---|---|---|
-| `develop` | Preview | preview.actitudalfa360.com | `rk_test_` | No (noindex) |
+| `develop` | Staging | staging.actitudalfa360.com (con contraseña) | `rk_test_` | No (noindex) |
 | `main` | Producción | actitudalfa360.com | `rk_live_` | Sí |
 
-Flujo: rama de trabajo → PR a `develop` → revisar en preview → PR `develop` → `main`. CI (lint, typecheck, tests, build, escaneo de llaves) corre en cada push/PR.
+Flujo: rama de trabajo → PR a `develop` → revisar en staging → PR `develop` → `main`. CI (lint, typecheck, tests, build, escaneo de llaves) corre en cada push/PR.
 
 ## Variables de entorno
 
@@ -45,6 +45,15 @@ npm run db:generate  # nueva migración tras cambiar src/infrastructure/db/schem
 ```
 
 Test de integración MySQL: `TEST_DATABASE_URL=mysql://… npm test`.
+
+## Base de datos y concurrencia
+
+- **Idempotencia:** índice único en `orders.payment_ref`; el mismo pago nunca crea dos pedidos.
+- **Sin carreras en la producción:** el pedido pasa a `fulfillment_processing` con un `UPDATE … WHERE status=…` (compare-and-set). Solo el proceso que cambia la fila produce el pedido. Si ese proceso se cae, el reclamo vence a los 5 min y el siguiente reintento de Stripe lo recupera.
+- **Restricciones en la base:** `status` es ENUM, montos `UNSIGNED`, `CHECK` de moneda y de líneas no vacías. La base rechaza datos inválidos aunque el código fallara.
+- **Índices:** compuesto `(status, created_at)` para listados/reintentos y `created_at` para reportes.
+- **Pool:** `DB_POOL_SIZE` (5 por defecto) con cola acotada, suficiente para hosting compartido sin agotar conexiones.
+- Probado con 20 webhooks simultáneos contra MySQL real (`tests/mysql.int.test.ts`).
 
 ## Seguridad
 

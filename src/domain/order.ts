@@ -1,6 +1,23 @@
 import type { Money } from './money';
 
-export type OrderStatus = 'paid' | 'fulfillment_pending' | 'fulfillment_created' | 'fulfillment_failed';
+/**
+ * Máquina de estados del pedido. Las transiciones se hacen con compare-and-set en la base de datos,
+ * así dos procesos concurrentes nunca producen el mismo pedido dos veces.
+ *
+ *   paid                      (sin producción automática)
+ *   fulfillment_pending ──claim──▶ fulfillment_processing ──▶ fulfillment_created
+ *                                        │ (reclamo vencido ⇒ se puede reintentar)
+ *                                        └──────────────▶ fulfillment_failed
+ */
+export type OrderStatus =
+  | 'paid'
+  | 'fulfillment_pending'
+  | 'fulfillment_processing'
+  | 'fulfillment_created'
+  | 'fulfillment_failed';
+
+/** Tiempo tras el cual un reclamo `processing` se considera abandonado (proceso caído). */
+export const FULFILLMENT_CLAIM_TTL_MS = 5 * 60_000;
 
 export interface OrderLine { readonly sku: string; readonly quantity: number }
 

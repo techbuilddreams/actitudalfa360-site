@@ -8,7 +8,7 @@ export const site = {
   lang: 'es',
   slogan: 'Háblame de hacer dinero, no de gente.',
   themeColor: '#0E0E0D',
-  isPreview: process.env.NEXT_PUBLIC_APP_ENV === 'preview',
+  isStaging: process.env.NEXT_PUBLIC_APP_ENV === 'staging',
   shipping: {
     countries: ['US'] as const,
     handlingDays: { min: 2, max: 5 },

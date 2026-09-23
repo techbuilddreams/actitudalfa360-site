@@ -8,9 +8,9 @@ export type Db = MySql2Database<typeof schema>;
 let db: Db | undefined;
 
 /** Pool único por proceso (reutiliza conexiones). */
-export function getDb(url: string): Db {
+export function getDb(url: string, poolSize = 5): Db {
   if (!db) {
-    const pool = mysql.createPool({ uri: url, connectionLimit: 5, waitForConnections: true, enableKeepAlive: true });
+    const pool = mysql.createPool({ uri: url, connectionLimit: poolSize, maxIdle: poolSize, idleTimeout: 60_000, queueLimit: 50, waitForConnections: true, enableKeepAlive: true });
     db = drizzle(pool, { schema, mode: 'default' }) as unknown as Db;
   }
   return db;

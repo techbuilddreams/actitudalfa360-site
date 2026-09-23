@@ -33,7 +33,7 @@ export const metadata: Metadata = {
   },
   twitter: { card: 'summary_large_image' },
   icons: { icon: [{ url: '/favicon.ico', sizes: '32x32' }, { url: '/img/icon-192.png', type: 'image/png', sizes: '192x192' }], apple: '/img/apple-touch-icon.png' },
-  robots: site.isPreview ? { index: false, follow: false } : { index: true, follow: true, 'max-image-preview': 'large' },
+  robots: site.isStaging ? { index: false, follow: false } : { index: true, follow: true, 'max-image-preview': 'large' },
   formatDetection: { telephone: false },
 };
 
@@ -45,7 +45,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   return (
     <html lang={site.lang} className={`${display.variable} ${body.variable} ${mono.variable}`}>
       <body>
-        {site.isPreview && <div className="preview-bar">Preview · no es la tienda real · pagos en modo prueba</div>}
+        {site.isStaging && <div className="preview-bar">Staging · no es la tienda real · pagos en modo prueba</div>}
         <a className="skip" href="#main">Ir al contenido</a>
         <SiteHeader />
         <main className="wrap" id="main">{children}</main>

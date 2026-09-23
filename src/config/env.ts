@@ -8,7 +8,7 @@ import { z } from 'zod';
  */
 const schema = z.object({
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
-  APP_ENV: z.enum(['local', 'preview', 'production']).default('local'),
+  APP_ENV: z.enum(['local', 'staging', 'production']).default('local'),
   NEXT_PUBLIC_SITE_URL: z.url().default('http://localhost:3000'),
 
   STRIPE_SECRET_KEY: z.string().regex(/^(sk|rk)_(test|live)_/).optional(),
@@ -16,6 +16,7 @@ const schema = z.object({
   STRIPE_AUTOMATIC_TAX: z.stringbool().default(false),
 
   DATABASE_URL: z.string().startsWith('mysql://').optional(),
+  DB_POOL_SIZE: z.coerce.number().int().min(1).max(20).default(5),
 
   PRINTIFY_AUTO_ORDER: z.stringbool().default(false),
   PRINTIFY_API_TOKEN: z.string().min(20).optional(),

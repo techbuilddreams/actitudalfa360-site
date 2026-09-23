@@ -43,10 +43,10 @@ export function paymentGateway(): StripeGateway {
 function orderRepository(): OrderRepository {
   if (orders) return orders;
   const url = env().DATABASE_URL;
-  if (url) orders = new MySqlOrderRepository(getDb(url));
+  if (url) orders = new MySqlOrderRepository(getDb(url, env().DB_POOL_SIZE));
   else if (isProduction()) throw new Error('DATABASE_URL es obligatoria en producción');
   else {
-    logger.warn('Sin DATABASE_URL: pedidos en memoria (solo local/preview)');
+    logger.warn('Sin DATABASE_URL: pedidos en memoria (solo local)');
     orders = new InMemoryOrderRepository();
   }
   return orders;
