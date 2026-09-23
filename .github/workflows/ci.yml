@@ -1,17 +1,22 @@
 name: CI
 on:
-  push: { branches: [main] }
-  pull_request:
+  push: { branches: [main, develop] }
+  pull_request: { branches: [main, develop] }
+
 jobs:
   check:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: shivammathur/setup-php@v2
-        with: { php-version: '8.2' }
-      - name: PHP lint
-        run: find . -name '*.php' -print0 | xargs -0 -n1 php -l
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: npm }
+      - run: npm ci
       - name: No secrets committed
         run: |
-          if git ls-files | grep -E '(^|/)\.env$|aa360-config\.php$'; then echo "Archivo secreto en el repo"; exit 1; fi
-          if git grep -nE '(sk|rk)_(live|test)_[A-Za-z0-9]{10,}|whsec_[A-Za-z0-9]{10,}' -- . ':!*.md'; then echo "Llave en el código"; exit 1; fi
+          if git ls-files | grep -E '(^|/)\.env($|\.)' | grep -v '.env.example'; then echo "Archivo .env en el repo"; exit 1; fi
+          if git grep -nE '(sk|rk)_(live|test)_[A-Za-z0-9]{10,}|whsec_[A-Za-z0-9]{10,}' -- . ':!*.md' ':!.env.example'; then echo "Llave en el código"; exit 1; fi
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run build
+        env: { NEXT_PUBLIC_SITE_URL: https://actitudalfa360.com, APP_ENV: production }

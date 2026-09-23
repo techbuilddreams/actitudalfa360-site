@@ -1,0 +1,39 @@
+{
+  "name": "actitudalfa360-site",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "node scripts/migrate.mjs && next start",
+    "lint": "eslint",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "check": "npm run lint && npm run typecheck && npm run test",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "node scripts/migrate.mjs"
+  },
+  "dependencies": {
+    "drizzle-orm": "^0.45.3",
+    "mysql2": "^3.24.4",
+    "next": "16.3.6",
+    "react": "19.2.8",
+    "react-dom": "19.2.8",
+    "server-only": "^0.0.1",
+    "stripe": "^22.6.2",
+    "zod": "^4.6.5"
+  },
+  "devDependencies": {
+    "@types/node": "^22.20.4",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "drizzle-kit": "^0.31.11",
+    "eslint": "^9",
+    "eslint-config-next": "16.3.6",
+    "typescript": "^5",
+    "vitest": "^5.0.1"
+  },
+  "engines": {
+    "node": ">=20.9"
+  }
+}
